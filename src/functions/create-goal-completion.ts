@@ -7,6 +7,7 @@ interface CreateGoalCompletionRequest {
   goalId: string
 }
 
+// Criar conclusão de meta
 export async function CreateGoalCompletion({
   goalId,
 }: CreateGoalCompletionRequest) {
@@ -30,10 +31,33 @@ export async function CreateGoalCompletion({
       .groupBy(goalCompletions.goalId)
   )
 
-  const result = await db.with(goalCompletionCounts).select({
-    desiredWeeklyFrequency: goals.desiredWeeklyFrequency,
-    completionCount: sql`
+  const result = await db
+    .with(goalCompletionCounts)
+    .select({
+      desiredWeeklyFrequency: goals.desiredWeeklyFrequency,
+      completionCount: sql`
       COALESCE(${goalCompletionCounts.completionCount}, 0)
-    `
-  })
+    `.mapWith(Number),
+    })
+    .from(goals)
+    .leftJoin(goalCompletionCounts, eq(goalCompletionCounts.goalId, goals.id))
+    .where(eq(goals.id, goalId))
+    .limit(1)
+
+  const { completionCount, desiredWeeklyFrequency } = result[0]
+
+  if (completionCount >= desiredWeeklyFrequency) {
+    throw new Error('Goal already completed this week!')
+  }
+
+  const insertResult = await db
+    .insert(goalCompletions)
+    .values({ goalId })
+    .returning()
+
+  const goalCompletion = insertResult[0]
+
+  return {
+    goalCompletion,
+  }
 }
