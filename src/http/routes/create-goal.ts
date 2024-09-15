@@ -2,6 +2,7 @@ import z from 'zod'
 import { createGoal } from '../../functions/create-goal'
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 
+// rota que cria metas
 export const createGoalRoute: FastifyPluginAsyncZod = async app => {
   app.post(
     '/goals',
